@@ -3,6 +3,7 @@ export default class SortableTable {
     this.headerConfig = headerConfig;
     this.data = data;
     this.element = this._createTable();
+    this.subElements = this._getSubElements();
   }
 
   _createTableHeader() {
@@ -51,20 +52,47 @@ export default class SortableTable {
     return table;
   }
 
+  _getSubElements() {
+    const result = {};
+    const elements = this.element.querySelectorAll("[data-element]");
+
+    for (const subElement of elements) {
+      const name = subElement.dataset.element;
+      result[name] = subElement;
+    }
+    console.log(result);
+
+    return result;
+  }
+
+  _update() {
+    const newBody = this._createTableBody();
+    this.subElements.body.replaceWith(newBody);
+    this.subElements.body = newBody;
+  }
+
   sort(field, order) {
     const direction = order === "desc" ? -1 : 1;
-
-    this.data = this.data.sort(
-      (item1, item2) =>
-        direction *
-        item1[field].localeCompare(item2[field], ["ru", "en"], {
-          sensitivity: "variant",
-          caseFirst: "upper",
-          numeric: true,
-        })
+    const { sortable, sortType } = this.headerConfig.find(
+      (column) => column.id === field
     );
 
-    this.element.replaceWith(this._createTable());
+    if (!sortable) {
+      return;
+    }
+
+    if (sortType === "string") {
+      this.data = this.data.sort(
+        (a, b) =>
+          direction *
+          a[field].localeCompare(b[field], ["ru", "en"], {
+            caseFirst: "upper",
+          })
+      );
+    } else {
+      this.data = this.data.sort((a, b) => direction * (a[field] - b[field]));
+    }
+    this._update();
   }
 
   destroy() {
